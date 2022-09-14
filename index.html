@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Split Jerk Assessment Tool</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <script src="https://unpkg.com/alpinejs" defer></script>
+
+  <script>
+    function predictedSplitFromSquat(amt) {
+      return ((amt - 6.994) / 1.262);
+    }
+
+    function predictedSplitFromOverheadPress(amt) {
+      return ((amt - 3.174) / 0.5751);
+    }
+
+    function predictedCombinedSplit(squat, ohp) {
+      return (0.512 + squat * 0.6329 + ohp * 0.2472);
+    }
+
+    function likelyWeakness(squat, ohp, split) {
+      const predictedSquatSplit = predictedSplitFromSquat(squat);
+      const predictedOhpSplit = predictedSplitFromOverheadPress(ohp);
+
+      const val = splitDiff(squat, ohp, split);
+
+      if (val < -0.15) {
+        return "Skill / Technique / Speed"
+      } else if (predictedSquatSplit > predictedOhpSplit) {
+        return "Overhead Press"
+      } else {
+        return "Squat"
+      }
+    }
+
+    function splitDiff(squat, ohp, split) {
+      const predictedSplit = predictedCombinedSplit(squat, ohp);
+      return (split - predictedSplit) / split;
+    }
+
+    function confidenceScore(predictedSquat, predictedOhp) {
+      if (predictedSquat > predictedOhp) {
+        return (predictedSquat - predictedOhp) / predictedOhp;
+      } else {
+        return (predictedOhp - predictedSquat) / predictedSquat;
+      }
+    }
+
+    function confidence(squat, ohp, split) {
+      const predictedSquatSplit = predictedSplitFromSquat(squat);
+      const predictedOhpSplit = predictedSplitFromOverheadPress(ohp);
+      const predictedWeakness = likelyWeakness(squat, ohp, split)
+      const diff = splitDiff(squat, ohp, split);
+      const confScore = confidenceScore(predictedSquatSplit, predictedOhpSplit)
+
+      if(predictedWeakness == "Squat" || predictedWeakness == "Overhead Press") {
+        if(confScore < 0.05) {
+          return "Very Low"
+        } else if (confScore < 0.1) {
+          return "Low"
+        } else if (confScore < 0.2) {
+          return "Moderate"
+        } else {
+          return "High"
+        }
+      } else {
+        if (diff > -0.2) {
+          return "Low"
+        } else if (diff > -0.25) {
+          return "Moderate"
+        } else {
+          return "High"
+        }
+      }
+    }
+
+  </script>
+</head>
+<body class="max-h-screen bg-gray-100">
+  <main
+    class="mx-auto p-4 mt-8 prose"
+    x-data="{
+      overhead_press: 75,
+      squat: 160,
+      split_jerk: 120
+    }"
+  >
+    <h1>
+      Split Jerk Assessment Tool
+    </h1>
+    <section>
+      <p>
+        From <a href="https://www.strongerbyscience.com/research-spotlight-split-jerk/">Stronger
+          By Science's split jerk article</a>
+      </p>
+      <p>
+        Input your 1RM (One Rep Max) numbers for <i>strict overhead press</i>,
+        <i>squat</i>, and <i>split jerk</i>. The form will predict your split
+        jerk based on both overhead press and squat, and will then predict your
+        "weakest link" and thus target for improvement.
+      </p>
+    </section>
+
+    <section class="max-w-2xl mx-auto bg-white border-gray-500 p-6 rounded-lg">
+      <form
+        class="space-y-6"
+      >
+        <div>
+          <label class="font-semibold text-sm text-gray-700" for="overhead_press">
+            Overhead Press
+          </label>
+          <input
+            type="number"
+            x-model="overhead_press"
+            name="overhead_press"
+            class="mt-1 block w-full rounded-md border-gray-500 shadow-sm"
+          >
+        </div>
+
+        <div>
+          <label class="font-semibold text-sm text-gray-700" for="squat">
+            Squat
+          </label>
+          <input
+            type="number"
+            x-model="squat"
+            name="squat"
+            class="mt-1 block w-full rounded-md border-gray-500 shadow-sm"
+          >
+        </div>
+
+        <div>
+          <label class="font-semibold text-sm text-gray-700" for="split_jerk">
+            Split Jerk
+          </label>
+          <input
+            type="number"
+            x-model="split_jerk"
+            name="split_jerk"
+            class="mt-1 block w-full rounded-md border-gray-500 shadow-sm"
+          >
+        </div>
+      </form>
+
+      <dl class="mt-5 space-y-5">
+        <div>
+          <dt class="font-semibold text-sm text-gray-700">Predicted Split Jerk from OHP</dt>
+          <dd class="text-gray-500" x-text="predictedSplitFromOverheadPress(overhead_press).toFixed(3)"></dd>
+        </div>
+
+        <div>
+          <dt class="font-semibold text-sm text-gray-700">Predicted Split Jerk from Squat</dt>
+          <dd class="text-gray-500" x-text="predictedSplitFromSquat(squat).toFixed(3)"></dd>
+        </div>
+
+        <div>
+          <dt class="font-semibold text-sm text-gray-700">Predicted Split Jerk (from both)</dt>
+          <dd class="text-gray-500" x-text="predictedCombinedSplit(squat, overhead_press).toFixed(3)"></dd>
+        </div>
+
+        <div>
+          <dt class="font-semibold text-sm text-gray-700">Likely Weakness</dt>
+          <dd class="text-gray-500" x-text="likelyWeakness(squat, overhead_press, split_jerk)"></dd>
+        </div>
+
+        <div>
+          <dt class="font-semibold text-sm text-gray-700">Confidence</dt>
+          <dd class="text-gray-500" x-text="confidence(squat, overhead_press, split_jerk)"></dd>
+        </div>
+
+      </dl>
+    </section>
+
+  </main>
+</body>
+</html>
